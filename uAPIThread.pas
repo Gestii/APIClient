@@ -20,7 +20,7 @@ type
     url: String;
     function doPost(url: string; params: TStringList): string;
     function getURL(url: String; params: TStringList): String;
-    function doGet(url: String; params: TStringList): String;
+    function doGet(url: String; params: TStringList; filename:string = ''): String;
     procedure writeToLog(msg: String);
   public
     constructor Create(logMemo: TMemo; appPath: String; apiKey: String;
@@ -44,7 +44,7 @@ begin
   self.url := url;
 end;
 
-function TApiThread.doGet(url: String; params: TStringList): String;
+function TApiThread.doGet(url: String; params: TStringList; filename:string = ''): String;
 var
   http : TIdHTTP;
   sslHandler : TIdSSLIOHandlerSocketOpenSSL;
@@ -62,18 +62,21 @@ begin
 
   Result := '';
   http := TIdHTTP.Create(nil);
+  http.HandleRedirects := true;
   http.Request.ContentType := 'application/x-www-form-urlencoded';
   http.IOHandler := sslHandler;
   response := TStringStream.Create;
   try
     http.Get(TIdURI.URLEncode(getURL(url, params)), response);
-    Result := response.DataString;
-  except
-    on e : EIdHTTPProtocolException do begin
-      Result := 'ERROR '+e.ErrorMessage;
+    if filename <> '' then begin
+      response.SaveToFile(filename);
     end;
+    Result := response.DataString;
+  finally
+    response.Free;
+    sslHandler.Free;
+    http.Free;
   end;
-  response.Free;
 end;
 
 function TApiThread.doPost(url: string; params: TStringList): string;
@@ -115,7 +118,7 @@ var
 begin
   Result := url + '?';
   for i := 0 to params.Count - 1 do begin
-    Result := Result + params[i];
+    Result := Result + params[i] + '&';
   end;
 end;
 

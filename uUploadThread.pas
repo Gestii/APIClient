@@ -30,7 +30,7 @@ type
       function checkUploadStatus(url: String; apiKey: String;
         uploadId: integer): String;
       function downloadErrors(url: String; apiKey: String;
-        uploadId: integer): String;
+        uploadId: integer;filename:string): String;
     protected
       procedure Execute; override;
     public
@@ -148,10 +148,7 @@ begin
       CopyFile(PChar(fileName), PChar(fileNameResult + ExtractFileName(fileName)), False);
       System.SysUtils.DeleteFile(fileName);
       if (status = 200) then begin
-        fileResult := TStringList.Create;
-        fileResult.Text := downloadErrors(url, apikey, uploadId);
-        fileResult.SaveToFile(fileNameResult  + 'errores_' + ExtractFileName(fileName));
-        fileResult.Free;
+        downloadErrors(url, apikey, uploadId, fileNameResult  + 'errores_' + ExtractFileName(fileName));
       end;
     end;
   end else begin
@@ -171,7 +168,7 @@ end;
 
 
 function UploadThread.downloadErrors(url, apiKey: String;
-  uploadId: integer): String;
+  uploadId: integer; filename:string): String;
 var
   params : TStringList;
 begin
@@ -180,7 +177,7 @@ begin
   params := TStringList.Create;
   params.Append('apikey=' + apiKey);
   try
-    Result := doGet(url, params);
+    Result := doGet(url, params,filename);
   except
     on e : Exception do begin
       Result := '{"status_code":-4,"msg":"'+e.Message+'"}';

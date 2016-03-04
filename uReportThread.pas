@@ -70,24 +70,20 @@ var
   fileNameResult: string;
   fileName: string;
   fileResult: TStringList;
+  reporturl: string;
 begin
   Result := true;
-  url := url + '/api/v1/cdn/uploads/'+task['id'].AsString;
-  params := TStringList.Create;
-  params.Append('apikey=' + apiKey);
-  fileResult := TStringList.Create;
+  reporturl := url + '/api/v1/cdn/reports/'+task['id'].AsString;
   fileNameResult := appPath + 'reportes\'+TASK['caption'].asString;
+  params := TStringList.Create;
+  fileResult := TStringList.Create;
   try
-    response := doGet(url, params);
-    if startsText('ERROR',response) then begin
-      raise Exception.Create(response);
-    end else begin
-      fileResult.Text := response;
-      fileResult.SaveToFile(fileNameResult);
-    end;
+    ForceDirectories(ExtractFilePath(fileNameResult));
+    params.Append('apikey=' + apiKey);
+    doGet(reporturl, params,fileNameResult);
   except
     on e : Exception do begin
-      writeToLog(url+' '+e.Message);
+      writeToLog(reporturl+' '+e.Message);
       result := false;
     end;
   end;
@@ -106,13 +102,18 @@ begin
     for task in tasks do begin
       if (task.IsType(stObject))
         and (task['status'].AsInteger = 3)
+        and (task['type'].AsString = 'report')
         and (not filecache.Find(task['id'].AsString,index))
         and downloadReport(Task) then begin
-          writeToLog('Se descargó el reporte: '+Task['Caption'].AsString);
+          writeToLog('Se descargó el reporte: '+Task['caption'].AsString);
           addtoCache(task['id'].AsString);
       end;
     end;
-    sleep(300000);
+    {$IFDEF DEBUG }
+      sleep(10000);
+    {$ELSE}
+      sleep(300000);
+    {$ENDIF}
   end;
 end;
 
@@ -130,7 +131,7 @@ begin
   params.Append('created_at='+d+'000000-1w');
   params.Append('limit=500');
   try
-    response := doGet(url, params);
+    response := doGet(taskurl, params);
   except
     on e : Exception do begin
       response := '{"status_code":-4,"msg":"'+e.Message+'"}';
