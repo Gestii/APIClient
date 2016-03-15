@@ -12,7 +12,7 @@ Con esta herramienta puedes subir archivos a Gestii con solo arrastrarlos a una 
 ```
 [API]
 apikey=<tu apikey>
-layout=1
+layout=default
 url=https://<agencia>.gestii.com
 ```
 * cambiar la apikey y la URL a los valores de tu agencia 
