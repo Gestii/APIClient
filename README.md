@@ -25,3 +25,6 @@ Para descargar  reportes lo único que hay que hacer es mandarlos a generar desd
 
 Puede solicitar a soporte que se generen automaticamente los reportes en intervalos de un dia.
 
+
+Esta herramienta se comunica con gestii mediante la aPI definida en http://devs.gestii.com/ 
+
