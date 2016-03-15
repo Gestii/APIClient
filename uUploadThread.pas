@@ -15,10 +15,6 @@ type
   UploadThread = class(TApiThread)
     private
       statusCodes: TDictionary<integer, string>;
-
-      appPath: String;
-      apiKey: String;
-      url: String;
       layoutId: String;
 
       function getCodeDescription(code: integer): String;
@@ -98,7 +94,7 @@ function UploadThread.doCompleteProcess(url, apiKey, fileName: String;
   layoutId: String): boolean;
 var
   resultString : String;
-  json : ISuperObject;
+  json1 : ISuperObject;
   uploadId : integer;
   status : integer;
   responseCode : integer;
@@ -106,27 +102,29 @@ var
   currentStatus : integer;
   fileResult : TStringList;
   fileNameResult : String;
+  json2: ISuperObject;
 begin
   resultString := uploadFile(url, apikey, filename, layoutId);
-  json := SO(resultString);
+  json1 := SO(resultString);
   //if (not resultString.StartsWith('{')) then begin
   if not AnsiStartsStr('{', resultString) then begin
     responseCode := 422;
-  end else if (Assigned(json.O['status_code'])) then begin
-    responseCode := json.AsObject.I['status_code'];
+  end else if (Assigned(json1.O['status_code'])) then begin
+    responseCode := json1.AsObject.I['status_code'];
   end else begin
     responseCode := 200;
   end;
   if (responseCode >= 200) and (responseCode < 300) then begin
-    uploadId := json.AsObject.I['id'];
-    status := json.AsObject.I['status'];
+    uploadId := json1.AsObject.I['id'];
+    status := json1.AsObject.I['status'];
     writeToLog('Procesando Archivo: '+IntToStr(uploadId));
     currentStatus := -1;
     for i := 0 to 999 do begin
       Sleep(3000);
       resultString := checkUploadStatus(url, apikey, uploadId);
-      json := SO(resultString);
-      status := json.AsObject.I['status'];
+      json2:= nil;
+      json2 := SO(resultString);
+      status := json2.AsObject.I['status'];
       if (status <> currentStatus) then begin
         writeToLog(getCodeDescription(status));
         currentStatus := status;
@@ -152,8 +150,8 @@ begin
       end;
     end;
   end else begin
-    if (Assigned(json.O['msg'])) then begin
-      writeToLog(json.AsObject.S['msg']);
+    if (Assigned(json1.O['msg'])) then begin
+      writeToLog(json1.AsObject.S['msg']);
     end else begin
       writeToLog(resultString);
     end;
@@ -163,6 +161,8 @@ begin
     CopyFile(PChar(fileName), PChar(fileNameResult), False);
     System.SysUtils.DeleteFile(fileName);
   end;
+  json1:=nil;
+  json2:=nil;
 end;
 
 

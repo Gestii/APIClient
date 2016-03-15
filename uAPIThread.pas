@@ -23,8 +23,8 @@ type
     function doGet(url: String; params: TStringList; filename:string = ''): String;
     procedure writeToLog(msg: String);
   public
-    constructor Create(logMemo: TMemo; appPath: String; apiKey: String;
-        url: String ); overload;
+    constructor Create(logMemo: TMemo; lappPath: String; lapiKey: String;
+        lurl: String ); overload;
   end;
 
 implementation
@@ -34,14 +34,14 @@ uses
   IdURI,
   IdSSLOpenSSL;
 
-constructor TApiThread.Create(logMemo: TMemo; appPath, apiKey, url: String);
+constructor TApiThread.Create(logMemo: TMemo; lappPath, lapiKey, lurl: String);
 begin
   inherited Create(true);
   FreeOnTerminate := true;
   self.logMemo := logMemo;
-  self.appPath := appPath;
-  self.apiKey := apiKey;
-  self.url := url;
+  self.appPath := lappPath;
+  self.apiKey := lapiKey;
+  self.url := lurl;
 end;
 
 function TApiThread.doGet(url: String; params: TStringList; filename:string = ''): String;
