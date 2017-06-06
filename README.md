@@ -7,7 +7,7 @@ Con esta herramienta puedes subir archivos a Gestii con solo arrastrarlos a una 
 
  * Descargar la versión más reciente desde https://github.com/Gestii/APIClient/releases/latest
  * Crear una carpeta donde se sincronizarán los archivos
- * copiar GestiiAPI.exe a esta carpeta
+ * copiar GestiiSync.exe a esta carpeta
  * crear un archivo llamado `api_config.ini` con los siguietnes parametros
 ```
 [API]
