@@ -9,11 +9,13 @@ uses
   IdHTTPHeaderInfo,
   IdIOHandler,
   IdBaseComponent,
-  Vcl.StdCtrls;
+  Vcl.StdCtrls,
+  superobject;
 
 type
   TApiThread = class(TThread)
   protected
+    sleepTime: integer;
     logMemo: TMemo;
     appPath: String;
     apiKey: String;
@@ -21,10 +23,11 @@ type
     function doPost(url: string; params: TStringList): string;
     function getURL(url: String; params: TStringList): String;
     function doGet(url: String; params: TStringList; filename:string = ''): String;
+    function loadJson(text: string): ISuperObject;
     procedure writeToLog(msg: String);
+    procedure doSleep;
   public
-    constructor Create(logMemo: TMemo; lappPath: String; lapiKey: String;
-        lurl: String ); overload;
+    constructor Create(logMemo: TMemo; lappPath: String; lapiKey: String; lurl: String); overload;
   end;
 
 implementation
@@ -67,8 +70,23 @@ begin
   http.IOHandler := sslHandler;
   response := TStringStream.Create;
   try
-    http.Get(TIdURI.URLEncode(getURL(url, params)), response);
-    if filename <> '' then begin
+    try
+      http.Get(TIdURI.URLEncode(getURL(url, params)), response);
+    Except
+      on E: EIdHTTPProtocolException do
+      begin
+        if E.ErrorCode = 429 then begin
+          sleep(30000);
+          http.Get(TIdURI.URLEncode(getURL(url, params)), response);
+        end else if E.ErrorCode = 404 then begin
+          response.Clear;
+        end else begin
+          raise
+        end;
+      end;
+
+    end;
+    if (filename <> '') and (response.Size > 0) then begin
       response.SaveToFile(filename);
     end;
     Result := response.DataString;
@@ -87,29 +105,50 @@ var
   fileData: TStringList;
 begin
   sslHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  with sslHandler do
-  begin
-    SSLOptions.Method := sslvSSLv3;
-    SSLOptions.Mode := sslmUnassigned;
-    SSLOptions.VerifyMode := [];
-    SSLOptions.VerifyDepth := 0;
-    host := '';
-  end;
-  Result := '';
   http := TIdHTTP.Create(nil);
-  http.Request.ContentType := 'application/x-www-form-urlencoded';
-  http.IOHandler := sslHandler;
   response := TStringStream.Create;
   try
-    http.Post(TIdURI.URLEncode(url), params, response);
-    Result := response.DataString;
-  except
-    on e: EIdHTTPProtocolException do
+    with sslHandler do
     begin
-      Result := e.ErrorMessage;
+      SSLOptions.Method := sslvSSLv3;
+      SSLOptions.Mode := sslmUnassigned;
+      SSLOptions.VerifyMode := [];
+      SSLOptions.VerifyDepth := 0;
+      host := '';
+    end;
+    Result := '';
+
+    http.Request.ContentType := 'application/x-www-form-urlencoded';
+    http.IOHandler := sslHandler;
+    try
+      http.Post(TIdURI.URLEncode(url), params, response);
+      Result := response.DataString;
+    except
+      on e: EIdHTTPProtocolException do
+      begin
+        Result := e.ErrorMessage;
+      end;
+    end;
+  finally
+    response.Free;
+    sslHandler.Free;
+    http.Free;
+  end;
+end;
+
+procedure TApiThread.doSleep;
+var
+  delta: integer;
+  i: Integer;
+begin
+  delta := sleeptime div 100;
+  for i := 0 to 99 do begin
+    sleep(delta);
+    if terminated then begin
+      break;
     end;
   end;
-  response.Free;
+
 end;
 
 function TApiThread.getURL(url: String; params: TStringList): String;
@@ -127,6 +166,21 @@ begin
   if (Assigned(LogMemo)) then begin
     Synchronize(procedure begin logMemo.Lines.Append(formatDateTime('yyyy/mm/dd hh:nn ',now)+ msg) end);
   end;
+end;
+
+function TApiThread.loadJson(text:string):ISuperObject;
+begin
+  if text = '' then begin
+    text := '{}';
+  end;
+
+  result := SO(text);
+
+  if not assigned(result) then begin
+    raise Exception.Create('Invalid JSON');
+  end;
+
+
 end;
 
 end.

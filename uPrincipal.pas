@@ -34,8 +34,10 @@ implementation
 
 procedure TForm2.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
+  Memo1.Lines.Add('Terminando ejecucion de hilos');
   tUpload.Terminate;
   tReport.Terminate;
+  sleep(2000);
 end;
 
 function TForm2.getCodeDescription(code: integer): String;
@@ -65,25 +67,26 @@ var
   url : String;
   layoutId : String;
   iniFile : TIniFile;
+  sleepTime: Integer;
 begin
   Timer1.Enabled := false;
 
   iniFile := TIniFile.Create(ExtractFilePath(Application.ExeName)+'api_config.ini');
-  apiKey := iniFile.ReadString('API', 'apikey', '');
-  layoutId := iniFile.ReadString('API', 'layout', 'default');
-  url := iniFile.ReadString('API', 'url', 'https://agencia.gestii.com');
+  try
+    apiKey := iniFile.ReadString('API', 'apikey', '');
+    layoutId := iniFile.ReadString('API', 'layout', 'default');
+    url := iniFile.ReadString('API', 'url', 'https://agencia.gestii.com');
+    sleepTime := iniFile.ReadInteger('API', 'sleepTime', 1000);
 
-
-  iniFile.WriteString('API', 'apikey', apiKey);
-  iniFile.WriteString('API', 'layout', layoutId);
-  iniFile.WriteString('API', 'url', url);
-
-
-
-  iniFile.Free;
-
+    iniFile.WriteString('API', 'apikey', apiKey);
+    iniFile.WriteString('API', 'layout', layoutId);
+    iniFile.WriteString('API', 'url', url);
+    iniFile.WriteInteger('API', 'sleepTime', sleepTime);
+  finally
+    iniFile.Free;
+  end;
   tUpload := UploadThread.Create(Memo1,ExtractFilePath(Application.ExeName),apiKey, url );
-  tUpload.iniciar(layoutId);
+  tUpload.iniciar(layoutId,sleepTime);
 
   tReport := TReportThread.Create(Memo1,ExtractFilePath(Application.ExeName),apiKey, url);
   tReport.iniciar();

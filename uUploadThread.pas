@@ -16,7 +16,6 @@ type
     private
       statusCodes: TDictionary<integer, string>;
       layoutId: String;
-
       function getCodeDescription(code: integer): String;
 
       function doCompleteProcess(url: String; apiKey: String; fileName: String;
@@ -33,7 +32,7 @@ type
       destructor Destroy; override;
       constructor Create(logMemo: TMemo; appPath: String; apiKey: String;
         url: String ); overload;
-      procedure iniciar(layoutId: String);
+      procedure iniciar(layoutId: String;sleepTime:integer);
     end;
 
   implementation
@@ -70,6 +69,7 @@ begin
   statusCodes.Add(1, 'Validando el archivo importado.');
   statusCodes.Add(2, 'Procesando el archivo importado.');
   statusCodes.Add(3, 'Importación realizada con éxito.');
+  statusCodes.Add(103, 'El archivo importado no es válido.');
   statusCodes.Add(105, 'El archivo importado está vacío.');
   statusCodes.Add(110, 'Se encontraron encabezados duplicados en el archivo.');
   statusCodes.Add(111, 'Se ha encontrado un encabezado vacío.');
@@ -105,7 +105,7 @@ var
   json2: ISuperObject;
 begin
   resultString := uploadFile(url, apikey, filename, layoutId);
-  json1 := SO(resultString);
+  json1 := loadJson(resultString);
   //if (not resultString.StartsWith('{')) then begin
   if not AnsiStartsStr('{', resultString) then begin
     responseCode := 422;
@@ -123,7 +123,7 @@ begin
       Sleep(3000);
       resultString := checkUploadStatus(url, apikey, uploadId);
       json2:= nil;
-      json2 := SO(resultString);
+      json2 := loadJson(resultString);
       status := json2.AsObject.I['status'];
       if (status <> currentStatus) then begin
         writeToLog(getCodeDescription(status));
@@ -205,7 +205,7 @@ begin
       until FindNext(searchResult) <> 0;
       FindClose(searchResult);
     end;
-    Sleep(1000);
+    doSleep;
   end;
 end;
 
@@ -218,9 +218,10 @@ begin
   end;
 end;
 
-procedure UploadThread.iniciar(layoutId: String);
+procedure UploadThread.iniciar(layoutId: String;sleepTime:integer);
 begin
   self.layoutId := layoutId;
+  self.sleepTime := sleepTime;
   resume;
 end;
 
@@ -233,28 +234,31 @@ begin
   Result := '';
   url := url + '/api/v1/tasks/uploads';
   params := TStringList.Create;
-  params.Append('apikey=' + apiKey);
-  params.Append('layout=' + layoutId);
+  fileData := TStringList.Create;
   try
-    if (FileExists(fileName)) then begin
-      fileData := TStringList.Create;
-      fileData.LoadFromFile(fileName);
-      if (trim(fileData.Text) <> '') then begin
-        params.Append('file=' + fileData.Text);
-        fileData.Free;
-        Result := doPost(url, params);
+    params.Append('apikey=' + apiKey);
+    params.Append('layout=' + layoutId);
+    try
+      if (FileExists(fileName)) then begin
+        fileData.LoadFromFile(fileName);
+        if (trim(fileData.Text) <> '') then begin
+          params.Append('file=' + fileData.Text);
+          Result := doPost(url, params);
+        end else begin
+          Result := '{"status_code":105,"msg":"Archivo vacío"}';
+        end;
       end else begin
-        Result := '{"status_code":105,"msg":"Archivo vacío"}';
+        Result := '{"status_code":-1,"msg":"El archivo no existe"}';
       end;
-    end else begin
-      Result := '{"status_code":-1,"msg":"El archivo no existe"}';
+    except
+      on e : Exception do begin
+        Result := '{"status_code":-2,"msg":"'+e.Message+'"}';
+      end;
     end;
-  except
-    on e : Exception do begin
-      Result := '{"status_code":-2,"msg":"'+e.Message+'"}';
-    end;
+  finally
+    params.Free;
+    fileData.Free;
   end;
-  params.Free;
 end;
 
 

@@ -97,6 +97,12 @@ var
   task: ISuperObject;
   index: Integer;
 begin
+  {$IFDEF DEBUG }
+    sleeptime := 10000;
+  {$ELSE}
+    sleeptime := 300000;
+  {$ENDIF}
+
   while not terminated do begin
     tasks := getTasks;
     for task in tasks do begin
@@ -109,11 +115,7 @@ begin
           addtoCache(task['id'].AsString);
       end;
     end;
-    {$IFDEF DEBUG }
-      sleep(10000);
-    {$ELSE}
-      sleep(300000);
-    {$ENDIF}
+    doSleep;
   end;
 end;
 
@@ -127,18 +129,21 @@ begin
   d:=formatDateTime('yymmdd',now()+1);
   taskurl := url + '/api/v1/tasks/';
   params := TStringList.Create;
-  params.Append('apikey=' + apiKey);
-  params.Append('created_at='+d+'000000-1w');
-  params.Append('limit=500');
   try
-    response := doGet(taskurl, params);
-  except
-    on e : Exception do begin
-      response := '{"status_code":-4,"msg":"'+e.Message+'"}';
+    params.Append('apikey=' + apiKey);
+    params.Append('created_at='+d+'000000-5d');
+    params.Append('limit=100');
+    try
+      response := doGet(taskurl, params);
+      result := loadJson(response);
+    except
+      on e : Exception do begin
+        response := '{"status_code":-4,"msg":"'+e.Message+'"}';
+      end;
     end;
-  end;
-  result := SO(response);
-  params.Free;
+  finally
+    params.Free;
+  end;            
 end;
 
 procedure TReportThread.iniciar();

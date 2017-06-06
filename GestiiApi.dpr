@@ -11,7 +11,10 @@ uses
 
 begin
   Application.Initialize;
-  Application.MainFormOnTaskbar := True;
+  {$IFDEF DEBUG }
+    Application.MainFormOnTaskbar := True;
+  {$ENDIF}
+  ReportMemoryLeaksOnShutdown := True;
   Application.CreateForm(TForm2, Form2);
   Application.Run;
 end.
