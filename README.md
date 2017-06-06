@@ -1,4 +1,4 @@
-#Gestii APIClient
+#GestiiSync
 
 Con esta herramienta puedes subir archivos a Gestii con solo arrastrarlos a una carpeta de tu computadora. Adicionalmente te permite descargar automaticamente tus reportes generados.
 
